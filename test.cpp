@@ -1,9 +1,8 @@
-/*-------------------------------------------------------------------------*\	
-Developed by Ali Qaseminejad Raeini
+/*-------------------------------------------------------------------------*\
 Basic unit test for InputFile, typses and Timing files
 
-For further information please contact us by email:
-Ali Q Raeini:    a.q.raeini@imperial.ac.uk
+// Developed by:
+// - Ali Q Raeini <a.q.raeini@gmail.com>  (2020-2022)
 \*-------------------------------------------------------------------------*/
 
 #include <fstream>
@@ -32,15 +31,15 @@ int main() {
 	{	cout<<"Testing InputFile inp: { ";
 		InputFile inp;
 		inp.add("one", "1");
-		int oneInInputFile=0; 
-		TEST( inp.lookup("one", oneInInputFile),  "checking `addKeyword` data exist" ); 
-		TEST( oneInInputFile == 1,                 "getting data into an an already allocated integer" ); 
-		TEST( inp.getOr("one",2) == 1,          "looking up an integer" ); 
-		TEST( inp.getOr("notthere",2) == 2,     "setting default value for non-existing data" ); 
+		int oneInInputFile=0;
+		TEST( inp.lookup("one", oneInInputFile),  "checking `addKeyword` data exist" );
+		TEST( oneInInputFile == 1,                 "getting data into an an already allocated integer" );
+		TEST( inp.getOr("one",2) == 1,          "looking up an integer" );
+		TEST( inp.getOr("notthere",2) == 2,     "setting default value for non-existing data" );
 		inp.add("dbl3_235", " 2 3 5." );
-		TEST( (mag(inp.getOr("dbl3_235",dbl3()))-30) < small,  "getting data as dbl3" ); 
-		TEST( inp.getOr("dbl3_235",string()) == "2",    "getting the first number as string" ); 
-		TEST( inp["dbl3_235"] == " 2 3 5.",       "getting raw string data using operator [], not-recommended" ); 
+		TEST( (mag(inp.getOr("dbl3_235",dbl3()))-30) < small,  "getting data as dbl3" );
+		TEST( inp.getOr("dbl3_235",string()) == "2",    "getting the first number as string" );
+		TEST( inp["dbl3_235"] == " 2 3 5.",       "getting raw string data using operator [], not-recommended" );
 	} cout<<" }"<<endl;
 
 	tim("Testing vars<T>" );

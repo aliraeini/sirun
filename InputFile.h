@@ -1,11 +1,9 @@
-// Input data file used by 3D image processing, network extraction, 
+// Input data file used by 3D image processing, network extraction,
 // flow simulation  and other codes
-// Developed by Ali Q. Raeini. See the documentation of the 
-// relevant codes for user guids and contact details, 
+// Developed by Ali Q. Raeini. See the documentation of the
+// relevant codes for user guids and contact details,
 
-#ifndef INPUTFILE_H
-#define INPUTFILE_H
-
+#pragma once
 
 #include <iostream>
 #include <fstream>
@@ -40,16 +38,12 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
  public:
 	using string = std::string;
 
-	InputFile(bool multiline=true)
-	:	informative(true), multiline_(multiline)  {
-		data_.push_back({string("end"), string()});//. add empty data at the end
-	}
+	InputFile(bool multiline=false)
+	:	informative(true), multiline_(multiline)  {}
 
 
-	InputFile(const string& fnam, bool multiline=true, bool inform=true, bool init=true)
+	InputFile(const string& fnam, bool multiline=false, bool inform=true, bool init=true)
 	:	informative(inform), multiline_(multiline)  {
-
-		if(fnam.empty()) {  data_.push_back({string("end"), string()});  return; }//  initialize empty InputFile on demand
 
 		read(fnam);
 
@@ -57,7 +51,7 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
 		 if( (data_[i].first=="include" || data_[i].first=="append" ) && !data_[i].second.empty())  {
 			data_[i].first = "included";
 			read(data_[i].second);
-		 }
+		}
 
 		if(init)  {
 			string wdir=getOr("workingDir", string());
@@ -69,16 +63,20 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
 				_TRY_(chdir(wdir))            << std::endl;
 			}
 
+			giv("verbose",informative);
 			setTitle(fnam);
 		}
 		if(informative) std::cout<<std::endl;
 	}
 
+	InputFile(std::istream& in, const string& nam, bool multiline=false)
+	:	informative(true), multiline_(multiline) 	{ 	read(in, nam);	}
+
 	InputFile(const string& kwrds, const string& nam, bool multiline=false)
 	:	informative(true), multiline_(multiline)  {  std::istringstream ss(kwrds);  read(ss, nam);  }
 
-	InputFile(std::istream& in, const string& nam, bool multiline=false)
-	:	informative(true), multiline_(multiline) 	{ 	read(in, nam);	}
+	InputFile(const char* kwrds, const string& nam, bool multiline=false)
+	:	InputFile(string(kwrds),nam,multiline)  {}
 
    InputFile(const InputFile& input, const string& nam)
 	:	data_(input.data_), fileName_(input.fileName_), folder_(input.folder_), name_(nam),
@@ -108,7 +106,7 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
 				case '=': case ':':
 					if(noeq)  {  sr.clear(); is.seekg(begl);  return false;  }
 					sr += '\t';         break;
-				case ',':  sr += '\t';  break;  //! comma is treated as white space 
+				case ',':  sr += '\t';  break;  //! comma is treated as white space
 
 				case EOF:  if(sr.empty())  is.setstate(std::ios::eofbit);  return false;
 
@@ -125,33 +123,30 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
 				case '<':  cr='\t'; do{         cr=sf.sbumpc(); cn+=int(cr=='<')-(cr=='>'); }while(cn && cr!=EOF);    break; // primitive: filter out  xml tags
 
 				case '\r':
-					if(sf.sgetc()=='\n') sf.sbumpc(); fallThrough;
+					if(sf.sgetc()=='\n') { sf.sbumpc(); } fallThrough;
 				case '\n':
 					cr=sf.sgetc();
 					return (cr=='\n' || cr=='\r') ? false  : multiline_; //! double new lines are always treated as end of keyword
 
 
 				case ';':  return  false;
-				default :  sr += char(cr); 
+				default :  sr += char(cr);
 			}
 		}
 	}
 
 
-	int read(const string& fnam, int importance=2)  {
-
+	int read(const string& fnam, int seize=2)  {
 		if(informative) (std::cout<< "/""/-*-C++-*-input: "+fnam+";  ").flush();
 		std::ifstream in(fnam);
 		if (in)  return read(in, fnam);
-
-		ensure(importance==0, "can not open " + fnam, importance);
-		return 0;
+		ensure(seize==0 || fnam=="NO_READ" || fnam=="-c", "can not open \"" + fnam+"\"", seize);
+		return 1;
 	}
 
 	int read(std::istream& in, string fnam="")  {
 
 		if(fnam.size()) fileName_ = fnam;
-		if(data_.size() && data_.back().first=="end") data_.pop_back();
 
 		string prev("NO_KEYWORD_READ");
 		while(in.good())  {
@@ -197,8 +192,6 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
 
 			data_.push_back({key, kydata});
 		}
-
-		data_.push_back({string("end"), string()});//. add empty data at the end
 		return 0;
 	}
 
@@ -243,11 +236,11 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
 	#ifdef _debugCompile_
 	 #define _debugInfo_(pref_) if(debugLevel) std::cout<<pref_+key+":"+data_[i].second<<std::endl
 	#else
-	 #define _debugInfo_(pref_) 
+	 #define _debugInfo_(pref_)
 	#endif
 
 
-	void echoKeywords(std::ostream& out=std::cout) const  {
+	int echoKeywords(std::ostream& out=std::cout) const  {
 		char el=';';
 		if(out.tellp()==0)  {el='\n'; out<<"{/""/ -*- C -*- "<<outputName()<<" input keywords:\n\n"; }
 		for_i(data_) {
@@ -256,76 +249,77 @@ class InputFile {//! InputFile is a general input file reader, with some flexibi
 			else out<< data_[i].second  <<el<< "\n";
 		}
 		if(el=='\n')  out<<"}"<<std::endl;
+		return 0;
 	}
 
-	void add(string key, string val)  {
-		ensure(data_.back().first=="end","input file handelling, overwriting "+data_.back().first);
-		data_.back() = {key,val};
-		data_.push_back({string("end"), string()});//. add empty data at the end
-	}
+	void add(const string& key, const string& val)  { data_.emplace_back(key,val); }
+	void add(const InputFile& inp)  { for(const auto& kw:inp.data())  data_.push_back(kw); }
 
 	void set(string key, string val, bool overwrite=true)  {
-		for_i(data_)  if(data_[i].first == key)  { if(overwrite) { _debugInfo_("Setting "); data_[i].second = val; } return; }
+		for_i(data_)  if(data_[i].first == key)  {
+			if(overwrite) { _debugInfo_("Resetting "); data_[i].second = val; } return; }
 		add(key,val);
 	}
-	void setDefault(string key, string val)  { set(key,val,false); }
+	void setDefault(const string& key, const string& val)  { set(key,val,false); }
 
 	string& operator[](string key)  { /// not recommended: cannot be refactored
 		for_i(data_)  if(data_[i].first == key)  { _debugInfo_("[] "); return data_[i].second; }
 		add(key,"");
-		ensure(data_.size()>=2 && data_[data_.size()-2].first==key);
-		return data_[data_.size()-2].second;
+		return data_.back().second;
 	}
 
-	void renameKeys(string key, string newkey)  {
-		for_i(data_)  if(data_[i].first == key)  { _debugInfo_("Renaming "); data_[i].first = newkey; }
+	void renameKeys(const string& key, string newkey)  {
+		for_i(data_)  if(data_[i].first == key)  { _debugInfo_("Renaming "); data_[i].first.swap(newkey); }
 	}
 
 
+  // Get functions:
 
-	const string& kwrd(const string& key, int importance=0) const  { //! get
+	const string& kwrd(const string& key, int seize=0) const  { //! get
 		for_i(data_) if(data_[i].first == key) { _debugInfo_("Reading ");     return (data_[i].second);  }
-		Assert(importance<1, key, "missing keyword", importance>1);
-		return data_.back().second;//. empty string
+		Assert(seize<1, key, "missing keyword", seize>1);
+		return empty_;//. empty string
 	}
 
-	bool giv(const string& key, isstr& iss, int importance=0) const  { //! give me
+	bool giv(const string& key, isstr& iss, int seize=0) const  { //! give me
 		iss.clear();
 		for_i(data_)  if(data_[i].first == key) { _debugInfo_("Reading ");  iss.str(data_[i].second);  return true; }
-		Assert(importance<1, key, "missing keyword", importance>1);
+		Assert(seize<1, key, "missing keyword", seize>1);
 		return false;
 	}
-	template<class T> bool giv(const string& key, T& var, int importance=0) const  {//! give me
+	template<class T> bool giv(const string& key, T& var, int seize=0) const  {//! give me
 		isstr iss;
-		if(giv(key, iss,importance))  {  iss>>var; return true; }
+		if(giv(key, iss,seize))  {  iss>>var; return true; }
 		else  return false;
 	}
-	bool giv(const string& key, bool& var, int importance=0) const {
+	bool giv(const string& key, bool& var, int seize=0) const {
 		isstr iss;
-		if(giv(key, iss, importance)){  char c; iss>>c;  var=(c=='T'||c=='t'||c=='Y'||c=='y'||c=='1'); return true;  }
+		if(giv(key, iss, seize)){  char c; iss>>c;  var=(c=='T'||c=='t'||c=='Y'||c=='y'||c=='1'); return true;  }
 		else  return false;
 	}
-	template<class T> bool lookup(const string& key, T& var, int importance=0) const {  return giv(key,var);  } /// similar to openfoam
+	template<class T> bool lookup(const string& key, T& var, int seize=0) const {  return giv(key,var);  } /// similar to openfoam
 	template<class T> T    getOr(const string& key, T var)  const {  giv(key, var);  return var;  }
 
 
 
 	void Assert(bool isOK, const string& key, const string message="", bool severe = true) const  {
 		if(!isOK)  { std::cerr<<"\n\n"<<(severe?"Error":"Warning")<<" in file "+fileName()+", keyword:\n  "+key<<": "+kwrd(key,0)+";\n  "+message+"\n"<<std::endl;
-			if (severe) exit(EXIT_FAILURE); }
+			if (severe) xception("keyword error"); }
 	}
 
 	void checkEndOfData(isstr& iss, const string& key, const string message="", bool severe = true) const  {
-		Assert(!iss.fail(), key,"Incomplete/wrong data", severe);  char c;  Assert(!iss.get(c), key,"Too much data", severe);  
+		Assert(!iss.fail(), key,"Incomplete/wrong data", severe);
+		char c;  Assert(!iss.get(c), key,"Too much data", severe);
 	}
 
 	string outputName() const { return folder_+name_; }
-	string prefix()     const { return folder_; }
+	string folder()     const { return folder_; }
 	string name()       const { return name_; }
 	string fileName()   const { return fileName_; } // optional
 
 
-	const std::vector< std::pair<string,string>>&  data() const { return data_; };
+	const std::vector<std::pair<string,string>>&  data() const { return data_; };
+	std::vector<std::pair<string,string>>&  dataRef()          { return data_; };
 
 protected:
 
@@ -333,15 +327,21 @@ protected:
 	string                                  fileName_; // optional
 	string                                  folder_;
 	string                                  name_;
+	string                                  empty_;
 
 public:	//. extra:
 	bool                           informative;
 	bool                           multiline_;
 };
 
-
-#endif
-
+///TODO: optimized for access map/dictionary of key-val input files
+//class InputDict {
+ //public:
+	//InputDict(const InputFile& inp) {
+	//}
+ //private:
+ //unordered_multimap<string_view,string*> dict_;
+//}
 
 
 
@@ -357,7 +357,7 @@ class mstream  {
  public:
 	enum: short { PRTF = 1, STDO = 2 }; // .prt and stdout
 
-	thread_local 
+	thread_local
 		static std::ofstream  dbgFile; /// output stream to write .dbg  file for debugging
 
 	mstream(std::string fnam, unsigned char po=PRTF|STDO)

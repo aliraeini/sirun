@@ -2,9 +2,9 @@
 #define TYPSES_H
 
 
-// Convinience vector classes used by network extraction, flow simulation 
+// Convinience vector classes used by network extraction, flow simulation
 // and other codes developed by Ali Qaseminejad Raeini.
-// Main template classes defined here: var3, var2, piece and Vars 
+// Main template classes defined here: var3, var2, piece and Vars
 
 
 #include <iomanip>
@@ -19,16 +19,18 @@
 #include <assert.h>
 #include <regex>
 
+template<typename T> T strTo(const std::string &s){  std::istringstream ss(s);  T t;  ss>>t;  return t; }
+
 #ifndef verySmall
-	#define verySmall  1e-31
-	#define   maxT(Typ)  (std::numeric_limits<Typ>::max())
-	#define   minT(Typ)  (std::numeric_limits<Typ>::min())
-	#define  iminT(Typ) (int(std::numeric_limits<Typ>::min()))
+	#define  verySmall  1e-31
+	#define   maxT(Typ)        (std::numeric_limits<Typ>::max())
+	#define   minT(Typ)        (std::numeric_limits<Typ>::min())
+	#define  iminT(Typ) (int   (std::numeric_limits<Typ>::min()))
 	#define  dminT(Typ) (double(std::numeric_limits<Typ>::min()))
-	#define  imaxT(Typ) (int(std::numeric_limits<Typ>::max()))
-	#define  fmaxT(Typ) (float(std::numeric_limits<Typ>::max()))
+	#define  imaxT(Typ) (int   (std::numeric_limits<Typ>::max()))
+	#define  fmaxT(Typ) (float (std::numeric_limits<Typ>::max()))
 	#define  dmaxT(Typ) (double(std::numeric_limits<Typ>::max()))
-	#define  epsT(Typ)  std::numeric_limits<Typ>::epsilon()
+	#define  epsT(Typ)          std::numeric_limits<Typ>::epsilon()
 #endif
 
 #if (__cplusplus < 201403L)
@@ -38,10 +40,11 @@
 	using std::enable_if_t;
 #endif
 
+#define _T_ typename std::remove_const<T>::type
 
 #ifdef OpenMP
  #ifdef _debugCompile_
-  #define OMPragma(_args_) 
+  #define OMPragma(_args_)
  #else
   #define OMPragma(_args_) _Pragma(_args_)
  #endif
@@ -73,8 +76,8 @@ class var3  {
  public:
 	T	x, y, z;
 	var3() = default;// Warning: not zero initialized in opt mode
-	template< typename std::enable_if<std::is_arithmetic<T>::value,int>::type = 0> 
-	explicit var3(T r)        { x = r;     y = r;     z = r; } // use this to zero-initialize 
+	template< typename std::enable_if<std::is_arithmetic<T>::value,int>::type = 0>
+	explicit var3(T r)        { x = r;     y = r;     z = r; } // use this to zero-initialize
 	var3(T r, T s, T t)       { x = r;     y = s;     z = t; }
 	explicit var3(const T* d)          { x = d[0];  y = d[1];  z = d[2]; }
 	template<class U>
@@ -89,9 +92,6 @@ class var3  {
 	T _1()                       const  { return y; }
 	T _2()                       const  { return z; }
 
-
-    //operator  int() const { return x; }
-    //operator  double() const { return x; }
 
 	var3&  operator += (const var3& v)  { x += v.x;  y += v.y;  z += v.z;  return  *this; }
 	var3&  operator -= (const var3& v)  { x -= v.x;  y -= v.y;  z -= v.z;  return  *this; }
@@ -146,7 +146,7 @@ class var2  {
  public:
 	T a;//union {T	first;  T x; };
 	T b;//union {T	second; T y; };
-	var2() = default;//not zero initialized 
+	var2() = default;//not zero initialized
 	var2(T r, T s)          { a = r;  b = s; }
 	var2(int r)             { a = r;  b = r; }  // use this to zero-initialize //ERROR REMOVE ME
 	var2(const T* d)        { a = d[0];  b = d[1]; }
@@ -214,7 +214,7 @@ class piece  {
 	piece(T* dd, int n) noexcept: d(dd), dn(d+n)     {};
 	piece(T* dd, T* de) noexcept: d(dd), dn(de)      {};
 	piece(const piece& p) noexcept: d(p.d), dn(p.dn) {};//! Note this is different from = operator note data hold by piece are not const unless piece is const itself
-	piece(std::vector<T>& vs) noexcept: d(&vs[0]), dn(d+vs.size()) {};
+	piece(std::vector<T>& vs) noexcept: d(&*vs.begin()), dn(d+vs.size()) {};
 	void reset(T* dd, int n)     { d=dd; dn=d+n; };
 	void reset(const piece& vs)     { d=&vs[0]; dn=d+vs.size(); };//! note data hold by piece are not const unless piece is const itself
 	void reset(std::vector<T>& vs)  { d=&vs[0]; dn=d+vs.size(); };
@@ -234,7 +234,7 @@ class piece  {
 	const T* data() const { return d; }
 
 	piece& fill(const T& v)  { std::fill(d, dn, v);  return *this; }
-	piece& operator =(const piece& v)  { ensure(size()==v.size(), "in operator =, piece sizes should be the same"); std::copy(v.d, v.dn, d);  return *this; }
+	piece& operator =(const piece& v)   { std::copy(v.d, v.dn, d);  return *this; }
 	piece& operator +=(const piece& v)  { for(auto& a:*this){ a += v[&a-d]; };  return *this; }
 	piece& operator -=(const piece& v)  { for(auto& a:*this){ a -= v[&a-d]; };  return *this; }
 	piece& operator *=(const piece& v)  { for(auto& a:*this){ a *= v[&a-d]; };  return *this; }
@@ -245,8 +245,7 @@ class piece  {
 	piece& operator *=(int t)           { for(auto& a:*this){ a *= t; };  return *this; }
 	piece& operator /=(double t)        { return (*this)*=(1./t); }
 	T sum() const                       { T sm=(T()*0.); for(auto a:*this){ sm += a; }  return sm; }
-	T avg() const                       { return sum()/size(); }
-	//T avgdbl() const                       { return sumdbl()/size(); }
+	T avg() const                       { return sum()/size(); } // see also sumdbl
 
   //protected:
 	T*  d;
@@ -268,13 +267,11 @@ class Vars: public piece<T>  {
 	Vars(const Vars& v):     piece<T>(new T[v.size()],v.size()) {  std::copy(v.d, v.dn, d); }
 	Vars(const std::vector<T>& v): piece<T>(new T[v.size()],v.size())  {  std::copy(&v[0], &*v.end(), d); }
 	Vars(const piece<T>& v, T(*func)(const T&)): piece<T>(new T[v.size()],v.size())  {  std::transform(&v[0], &*v.end(), d, func); }
-	Vars(Vars&& v)  noexcept:  piece<T>(v.d,v.size()) {  v.d=0; v.dn=0; }
+	Vars(Vars&& v)  noexcept:  piece<T>(v.d,v.size()) { v.d=0; v.dn=0; }
 	Vars(const T* dd, int nn): piece<T>(new T[nn],nn)            { std::copy(dd, dd+nn, d); }
 	Vars(const T* dd, const T* de): piece<T>(new T[de-dd],de-dd)    { std::copy(dd, de, d); }
 	//Vars(const T* dd, const T* de, T(*func)(const T&)): piece<T>(new T[de-dd],de-dd)    { std::transform(dd, de, d, func); }
-	~Vars(){ if(d) delete[] d; /*(std::cout<<'~').flush();*/ };
-
-	//Vars(Vars& v, bool move): piece<T>(v.d,v.size())  {  v.d=0; v.dn=0; assert(move); } //same as above but enforced by move
+	~Vars() noexcept { if(d) delete[] d; };
 
 	void operator =(Vars&& v){ eat(v); };
 	void eat(Vars& v)       { { if(d) delete[] d; }  d = v.d;  dn=v.dn; v.d=0; v.dn=0; /*(std::cout<<'$').flush();*/ };
@@ -301,13 +298,13 @@ class Vars: public piece<T>  {
 	void resize(int nn,const T& val)  {
 		{ if(d) delete[] d; }   if(nn) {d=new T[nn]; dn=d+nn;  std::fill(d,dn, val); } else {d=0; dn=0; } }
 	void pbak(T& vj) {// inefficient, use std::vector instead for dyn_array
-		if(d){ T* od=d;  d=new T[dn+1-d]; std::copy(od,dn,d);
-				 dn=d+dn-od+1;    *(dn-1)=vj;      delete[] od; }
-		else { d=new T[1];      *d=vj;           dn=d+1;      }
+		if(d){ T* od=d;    d=new T[dn+1-d];  std::copy(od,dn,d);
+				   dn=d+dn-od+1;  *(dn-1)=vj;    delete[] od; }
+		else { d=new T[1];         *d=vj;    dn=d+1;      }
 	}
 	void pbak(const piece<T> vs){
 		if(d){ T* od=d;               d=new T[dn+vs.size()-d];       std::copy(od,dn, d);
-				 dn=d+dn-od+vs.size();  std::copy(vs.d, vs.dn, dn-vs.size());  delete[] od; }
+		       dn=d+dn-od+vs.size();  std::copy(vs.d, vs.dn, dn-vs.size());  delete[] od; }
 		else { d=new T[vs.size()];    std::copy(vs.d, vs.dn, d);          dn=d+vs.size(); }
 	}
 };
@@ -328,7 +325,7 @@ template<class T>	Vars<T>        operator -(const piece<T>& dis, const piece<T>&
 template<class T, class U> Vars<U> operator *(const T dis, const piece<U>& v) { Vars<U> rt(v); return rt*=dis;  }
 template<class T> Vars<var3<T>>    operator *(const piece<T>& dis, const piece<var3<T>>& v) { Vars<var3<T>> rt(v); return rt*=dis;  }
 //template<class T, typename U> Vars<T>  operator *(const piece<T>& dis, const piece<U>& v) { Vars<T> rt(dis); return rt*=v;  }
-template<class T, class U> Vars<T> operator /(const piece<T>& dis, const piece<U>& v) { Vars<T> rt(dis);  return rt/=v;  }
+template<class T, class U> Vars<T> operator /(const piece<T>& dis, const piece<U>& v) { Vars<T> rt(dis); return rt/=v;  }
 template<class T>	Vars<T>        operator +(const piece<T>& dis,T t)        { Vars<T> rt(dis); rt+=t;    return rt; }
 template<class T>	Vars<T>        operator -(const piece<T>& dis,T t)        { Vars<T> rt(dis); rt-=t;    return rt; }
 template<class T>	Vars<T>        operator *(const piece<T>& dis, double t)  { Vars<T> rt(dis); rt*=t;    return rt; }
@@ -379,32 +376,22 @@ class varsORv: public Vars<T> {
 
 	T& operator [](int i)             { if(d+i<dn) return d[i]; else return dfult; }
 	const T& operator [](int i) const { if(d+i<dn) return d[i]; else return dfult; }
-	//T& operator ()(int i)             { return   (d+i<dn ? Xp+Xa*transf(d[i]+px) : dfult); };
-	//const T& operator ()(int i) const { return   (d+i<dn ? Xp+Xa*transf(d[i]+px) : dfult); };
 	T scalefrom01(T val) const       { return   Xp+Xa*transf(val*ax+px); }
 
-	void rescaledata(T d0, T del)	                       { Xp=d0; Xa=del; T* dd=d-1;  while(++dd<dn)  *dd = (*dd-d0)/del;  }
+	///fn shall be inverse of transf
 	void rescaledata(T d0, T del, T(*fn)(T))             { Xp=d0; Xa=del; T* dd=d-1;  while(++dd<dn)  *dd = fn((*dd-Xp)/Xa);  }
 	void rescaledata(T d0, T del, T(*fn)(T), T p0, T a0) { Xp=d0; Xa=del; px=fn((p0-Xp)/Xa); ax=fn((p0+a0-Xp)/Xa)-px;
 	                                                         T* dd=d-1; while(++dd<dn)  *dd = (fn((*dd-Xp)/Xa)-px)/ax;  }
-	//void transformdata(T d0, T del, T(*fn)(T), T p0)	{
-		//Xp=d0; Xa=del; px=fn((p0-d0)/del); T* dd=d-1;  while(++dd<dn)	
-			//*dd = fn((*dd-d0)/del)-px; }
+	void rescaledata(T d0, T del)	                       { Xp=d0; Xa=del; T* dd=d-1;  while(++dd<dn)  *dd = (*dd-d0)/del;  }
 };
 
-//template<class T>
-	//T rescaleval(T val, T d0, T del, T(*fn)(T), T p0, T a0) { T px=fn((p0-d0)/del); T ax=fn((p0+a0-d0)/del)-px;  return (fn((val-d0)/del)-px)/ax; }
-inline double rescaleval(double val, double d0, double del, double(*fn)(double), double p0, double a0) { 
+inline double rescaleval(double val, double d0, double del, double(*fn)(double), double p0, double a0) {
 	double px=fn((p0-d0)/del); double ax=fn((p0+a0-d0)/del)-px;  return (fn((val-d0)/del)-px)/ax; }
 
 template<class T>  Vars<T> operator -(T v, Vars<T> vs)  { Vars<T> rt(vs); for(auto& a:rt){ a =v-a; };  return rt; }
 
 template<class T>  var3<T> round(const var3<T>& vec) 	{ 	var3<T> rt(vec); 	rt.x=round(vec.x); rt.y=round(vec.y); rt.z=round(vec.z); 	return rt; 	}
 template<class T>  Vars<T> round(const Vars<T>& vec) 	{ 	Vars<T> rt(vec); 	for(auto& v:rt) v=round(v); 	return rt; 	}
-
-//! moves iss into oss then deletes iss, but efficiently
-//template<class T> void transferto(Vars<Vars<T> >& oss, size_t i, Vars<Vars<T> >&& iss, size_t j=0)
-//{	auto* os = oss.d+i-1;	auto* is = iss.d+j-1;	while ((++is)<iss.dn) { (++os)->d=is->d; os->dn=is->dn; is->d=0;	}  /*iss.d=0;*/	}
 
 
 
@@ -431,10 +418,10 @@ template<class T> T sumq(piece<T> ps)  {	T sm = *ps.d; while(++ps.d<ps.dn){ sm +
 template<class T>          T sum(const piece<T>& ps)  {	T sm = (T()*0.); const T* p= ps.d-1; while(++p<ps.dn){ sm+= *p; }  return sm; }
 template<class T, class U> T sum(const piece<T>& ps, const piece<U>& ws)  {  T sm= (T()*0.);  T* p= ps.d-1;  U *w=ws.d-1; while(++p<ps.dn){ sm+= *(++w) * *p; }  return sm; }
 template<class T> vars<T> sum(piece<piece<T>> ps)  { Vars<T> sm(ps[0]); while(++ps.d<ps.dn){ sm+= *ps.d; }  return sm;  } // does not work for size zero
-	
+
 template<class T>           T sumSqrs(const piece<T>& ps)  {  T sm= (T()*0.); const T* p= ps.d-1; while(++p<ps.dn){ sm+= *p * *p; }  return sm; }
 template<class T, class U>  T sumSqrs(const piece<T>& ps, const piece<U>& ws)  { //TODO remove refs
-	                                  T sm = (T()*0.); const T* p = ps.d-1; const U *w=ws.d-1; while(++p<ps.dn){ sm += *(++w) * *p * *p; }  return sm; }
+                                      T sm = (T()*0.); const T* p = ps.d-1; const U *w=ws.d-1; while(++p<ps.dn){ sm += *(++w) * *p * *p; }  return sm; }
 template<class T>   double sumdblSqrs(const piece<T>& ps)  {  double sm=0.; const T* p= ps.d-1; while(++p<ps.dn){ sm+= double(*p) * *p; }  return sm; }
 
 
@@ -443,9 +430,6 @@ template<class T>   T min(const piece<T>& pis)  { return *std::min_element(pis.d
 template<class T>   T max(const piece<T>& pis)  { return *std::max_element(pis.d,pis.dn); }
 template<class T, class TFunc> void transform(piece<T>& pis, TFunc func)  { for(T& dr:pis) dr=func(dr); }
 template<class T>              void transform(T* d, const T* dn, T(*func)(const T&))  { --d; while (++d<dn) *d=func(*d); }
-//template<class T> void transform(piece<T>& pis, float(*func)(float&))  { for(float& dr:pis) dr=func(dr); }
-
-//double (*func)(const double&) = ([](const double& d) { return d; }) // this is just  a note/reminder on old  function / lambda...
 
 
 template<class T> std::vector<T>& operator *= (std::vector<T>& vs, double scale)  {  for(T& v: vs) v*=scale;   return vs;  }
@@ -453,101 +437,24 @@ template<class T> std::vector<T>& operator *= (std::vector<T>& vs, double scale)
 
 
 template<class T, template<class ...> class C1, template<class ...> class C2>
-vars<vars<T> > transpose(const C1<C2<T> >& vecvec)  {
-	if(!vecvec.size()) return vars<vars<T> >();
-	vars<vars<T> > trans(vecvec[0].size(),vars<T>(vecvec.size()));
-	for (size_t i=0; i<vecvec[0].size(); ++i)
-		for (size_t j=0; j<vecvec.size(); ++j) trans[i][j] = vecvec[j][i] ;
+vars<vars<T> > transpose(const C1<C2<T> >& vv)  {
+	if(!vv.size()) return vars<vars<T> >();
+	vars<vars<T> > trans(vv[0].size(),vars<T>(vv.size()));
+	for (size_t i=0; i<vv[0].size(); ++i)
+		for (size_t j=0; j<vv.size(); ++j) trans[i][j] = vv[j][i] ;
 	return trans;
 }
 
 template<class T, size_t N, template<class ...> class C1>
-vars<vars<T> > transpose(const C1<std::array<T,N> >& vecvec)  {
-	if(!vecvec.size()) return vars<vars<T> >();
-	vars<vars<T> > trans(vecvec[0].size(),vars<T>(vecvec.size()));
-	for (size_t i=0; i<vecvec[0].size(); ++i)
-		for (size_t j=0; j<vecvec.size(); ++j) trans[i][j] = vecvec[j][i] ;
+vars<vars<T> > transpose(const C1<std::array<T,N> >& vv)  {
+	if(!vv.size()) return vars<vars<T> >();
+	vars<vars<T> > trans(vv[0].size(),vars<T>(vv.size()));
+	for (size_t i=0; i<vv[0].size(); ++i)
+		for (size_t j=0; j<vv.size(); ++j) trans[i][j] = vv[j][i] ;
 	return trans;
 }
 
 template<class T, template<class ...> class C>  piece<T> allof(C<T>& vs) { return piece<T>(&*vs.begin(), &*vs.end()); }
-
-
-
-
-//! class table IO, usage: cout<< tableIO(stdVecVec)  (not TableIO, for auto detecting template paarams)
-template<class T, template<class ...> class C1, template<class ...> class C2>
-class TableIO  { public:
-
-	TableIO(const C1<C2<T> >& tbl, std::vector<std::string> hdrs=std::vector<std::string>(), bool transpose=true, char sepr='\t') 
-	:	vss_(tbl),  hds_(hdrs),  transpose_(transpose), sep_(sepr) {}; // careful: tbl lifetime: don't pass rvalue tbl
-
-	std::string hdr(size_t i) const { return hds_.size()>i ? hds_[i] : ""; }
-
-	const C1<C2<T> >&        vss_; // ref is bad idea
-	std::vector<std::string> hds_;
-	const char               transpose_;
-	const char               sep_;
-};
-
-
-//! class table IO, usage:    cout<< pieces().apnd(vec,"nam") ;
-//template<class T>
-//class piecesIO : public TableIO<T, std::vector, piece > { public:
-	//using TableIO<T, std::vector, piece >::hds_;
-	//piecesIO(bool transpose=true, char sepr='\t') :  TableIO<T,std::vector, piece>(vss_,std::vector<std::string>(),transpose,sepr) {};
-	//piecesIO& apnd(piece<T> vs, std::string nam="")  { vss_.push_back(vs); if(hds_.size()||nam.size()) {hds_.push_back(nam); }  return *this; }
-	//std::vector<piece<T> >   vss_;
-//};
-
-//! class Table for IO, usage: cout<< Table().apnd(vec(...),"nam") ;
-template<class T, template<class ...> class C2>
-class Table : public TableIO<T, std::vector, C2 > { public:
-	using TableIO<T, std::vector, C2>::hds_;
-	Table(bool transpose=true, char sepr='\t') :  TableIO<T,std::vector, C2>(vss_,std::vector<std::string>(),transpose,sepr) {};
-	Table& apnd(const C2<T>& vs, std::string nam="")  { vss_.push_back(vs); if(hds_.size()||nam.size()) {hds_.push_back(nam); }  return *this; }
-	Table& apnd(const TableIO<T, std::vector, C2>& tbl) { 
-		for_i(tbl.vss_) { vss_.push_back(tbl.vss_[i]); if(hds_.size()&&tbl.hds_.size()) hds_.push_back(tbl.hds_[i]); }  return *this; }
-	std::vector<C2<T> >   vss_;
-};
-
-template<class T, template<class ...> class C1, template<class ...> class C2>
-TableIO<T,C1,C2> tableIO(const C1<C2<T> >& vecvec, std::vector<std::string> hdrs=std::vector<std::string>(), bool transpose=true, char sepr='\t') {
-	return TableIO<T,C1,C2>(vecvec,hdrs,transpose,sepr);  }
-
-template<class T, template<class ...> class C1, template<class ...> class C2>
-                          std::ostream& operator << (std::ostream& out, const TableIO<T,C1,C2>& tbl) {
-	if(tbl.hds_.size()==tbl.vss_.size()) {
-		for_(tbl.hds_,j) { out<<std::setw(12)<<std::left<< tbl.hds_[j]   <<tbl.sep_; }  out<<'\n'; }
-	for_(tbl.vss_[0],i) {
-		for_(tbl.vss_,j) { out<<std::setw(12)<<std::left<< tbl.vss_[j][i]<<tbl.sep_; }  out<<'\n'; }
-	out << '\n';
-	return out;
-}
-
-template<class T, template<class ...> class C2>
-                          std::istream& operator >> (std::istream& ins, Table<T,C2>& tbl) { // inefficient!!!
-	ins >> std::ws;
-	std::string row, item;
-	if( std::is_arithmetic<T>::value && isalpha(ins.peek()))  {
-		getline( ins, row );
-		std::stringstream ss( row );
-		while ( getline( ss, item, tbl.sep_ ) )   tbl.hds_.push_back(item);
-	}
-	std::vector<std::vector<T> > res;
-	while( getline( ins, row ))  {
-		std::vector<T> Ro;	std::stringstream ss( row );
-		while ( getline( ss, item, tbl.sep_ ) )   Ro.push_back( strTo<T>(item) );
-		res.push_back( Ro );
-	}
-	if(res.size()) tbl.vss_.resize(res[0].size());   else return ins;
-	for (size_t i=0; i<tbl.vss_.size(); ++i)  {
-		tbl.vss_[i].resize(res.size());
-		if(res[i].size()!=tbl.vss_.size()) std::cout<<"Error table sizes don't match"<<std::endl;
-		for (size_t j=0; j<tbl.vss_[i].size(); ++j) tbl.vss_[i][j]=res[j][i];
-	}
-	return ins;
-}
 
 
 
@@ -580,7 +487,7 @@ template<class T>          std::ostream& operator << (std::ostream& out, const s
 }
 
 template<class T>          std::istream& operator >> (std::istream& ins, std::vector<T>& vec) {
-	if(vec.size()) 
+	if(vec.size())
 		for (size_t i=0; i<vec.size(); ++i)  ins >> vec[i];
 	else { T t; while (ins>>t) vec.push_back(t); }
 	return ins;
@@ -633,11 +540,12 @@ inline std::string replaceFromTo(const std::string& str, const std::string& frm,
 	//return str;
 }
 
-inline std::string baseName(const std::string& fName) { // removes file suffix
-	auto dloc=fName.find_last_of('.'); 	
+
+inline std::string basePath(const std::string& fName) { // removes file suffix
+	auto dloc=fName.find_last_of('.');
     if( dloc != std::string::npos)    {
-    	auto sl=fName.find_last_of('/');  
-    	if( sl!=std::string::npos && sl>dloc) return fName; 
+    	auto sl=fName.find_last_of('/');
+    	if( sl!=std::string::npos && sl>dloc) return fName;
 		return fName.substr(0,dloc);
 	}
 	return fName;
@@ -661,31 +569,31 @@ inline double roundec(double x,int d)  { double scale=std::pow(10,int(std::log10
 //template<class T> piece<T>   insidvars(piece<T>& vs) { return piece<T>(vs.d+1, vs.dn-1); }
 template<class T> Vars<T>  diffVars(piece<T> vs) { Vars<T> rt(vs);  piece<T>(rt.d+1,rt.dn)-=vs; rt[0]=rt[1]; return rt; }
 template<class T> Vars<T>  movingAvg(piece<T> vs) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
-	Vars<T> rt(vs.size());  T* d=rt.d; *d=0.5*(vs[0]+vs[1]); 
-	for(T* o=vs.d+2; o<vs.dn;++o) { *(++d)=(1./3.)*(*(o-2)+*(o-1)+*o); } 
+	Vars<T> rt(vs.size());  T* d=rt.d; *d=0.5*(vs[0]+vs[1]);
+	for(T* o=vs.d+2; o<vs.dn;++o) { *(++d)=(1./3.)*(*(o-2)+*(o-1)+*o); }
 	*(++d)=0.5*(*(vs.dn-2)+*(vs.dn-1)); return rt; } // TODO: use vs storage instead of o
 
 template<class T> T closer(T cv, T v1, T v2) { return (abs(cv-v1)<abs(cv-v2)) ?  v1 : v2; }
 //template<class T> Vars<T>  biMovingAvg(piece<T> vs) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
-	//if(len(vs)<7) return vs; constexpr double p3=(1./3.);	Vars<T> res(vs.size());  T* rt=res.d; 
+	//if(len(vs)<7) return vs; constexpr double p3=(1./3.);	Vars<T> res(vs.size());  T* rt=res.d;
 
-	//*rt=0.5*(vs[0]+vs[1]); *++rt=p3*(vs[0]+vs[1]+vs[2]);  *++rt=p3*(vs[1]+vs[2]+vs[3]); 
+	//*rt=0.5*(vs[0]+vs[1]); *++rt=p3*(vs[0]+vs[1]+vs[2]);  *++rt=p3*(vs[1]+vs[2]+vs[3]);
 	//vs.dn-=3; T* o=vs.d+3;
 	//for(; o<vs.dn;++o) { *++rt = closer(*o,0.25*(*(o-3)+*(o-2)+*(o-1)+*o), 0.25*(*(o)+*(o+1)+*(o+2)+*(o+3)));  }  --o;
-	//*++rt=p3*(o[0]+o[1]+o[2]); *++rt=p3*(o[1]+o[2]+o[3]); *++rt=0.5*(o[2]+o[3]);  
-	//return res; 
+	//*++rt=p3*(o[0]+o[1]+o[2]); *++rt=p3*(o[1]+o[2]+o[3]); *++rt=0.5*(o[2]+o[3]);
+	//return res;
 //}
 
 
 // TODO test BC handling
 template<class T> Vars<T>  biMovingAvg(piece<T> vs,int krnl, int bKrnl=1) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
-	if(len(vs)<7) return vs; 
+	if(len(vs)<7) return vs;
 	Vars<T> res(vs.size());  T* rt=res.d-1;  const double pl=1./(1+krnl);	  bKrnl=std::min(bKrnl,krnl);
 	for(int i=0; i<krnl; ++i)  { int krp = std::max(i,bKrnl)+1; *++rt=sumq(piece<T>(vs.d,krp)/krp); }
 	vs.dn-=krnl; T* o=vs.d+krnl;
 	for(; o<vs.dn;++o) { *++rt=closer(*o, sumq(piece<T>(o-krnl,1+krnl))*pl, sumq(piece<T>(o,1+krnl))*pl); }  --o; vs.dn+=krnl;
 	for(int i=krnl; i>0; --i) { int krp = std::max(i,bKrnl)+1;  *++rt=sumq(piece<T>(vs.dn-krp, krp))/krp; }
-	return res; 
+	return res;
 }
 
 // TODO test BC handling
@@ -698,7 +606,7 @@ template<class T> void  NaNsToMean(piece<T> vs) {
 
 
 template<class T> T med_closer(vars<T> vs, T orig)  {
-	if (vs.size()&1==0) {
+	if ((vs.size()&1)==0) {
 		 const auto nth = vs.begin() + vs.size()/2 - 1;
 		 std::nth_element(vs.begin(),   nth , vs.end());   const auto e1 = *nth;
 		 std::nth_element(vs.begin(), ++nth , vs.end());   const auto e2 = *nth;
@@ -707,13 +615,13 @@ template<class T> T med_closer(vars<T> vs, T orig)  {
 }
 template<class T> T med_odd(vars<T> vs)  { const auto nth = vs.begin()+vs.size()/2;  std::nth_element(vs.begin(), nth, vs.end());  return *nth;  }
 template<class T> Vars<T>  median(piece<T> vs,int krnl, int bKrnl=1) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
-	if(len(vs)<7) return vs;	
+	if(len(vs)<7) return vs;
 	Vars<T> res(vs.size());  T* rt=res.d-1;	    bKrnl=std::min(bKrnl,krnl);
 	for(int i=0; i<krnl; ++i)   *++rt=med_odd(vars<T>(vs.d,2*std::max(i,bKrnl)+1));
 	vs.dn-=krnl; T* o=vs.d+krnl;
 	for(; o<vs.dn;++o) { *++rt=med_odd(vars<T>(o-krnl,1+2*krnl)); }  --o; vs.dn+=krnl;  // vars -> piece ?
 	for(int i=krnl; i>0; --i) { int krn = std::max(i,bKrnl);  *++rt=med_odd(vars<T>(vs.dn-2*krn-1, 2*krn+1)); }
-	return res; 
+	return res;
 }
 
 
@@ -762,13 +670,13 @@ inline double averageCDF(double xMin, double xMax, const std::vector<dbl2>& tabl
 
 	if( !(itr->a >= xMin && (itr-1)->a <=  xMin))  {
 		std::cout<<"\n LookUp Error:  "	<< xMin-1.<<"     " << tabl.begin()->a-1.<<"  "  << tabl.begin()->b<<"    " << tabl.rbegin()->a-1.<<"  " << tabl.rbegin()->b
-			 <<"\n\n "<<(itr == tabl.end())<<std::endl; exit(-1);  }
+			 <<"\n\n "<<(itr == tabl.end())<<std::endl;   }
 
 	assert(itr->a > xMin && (itr-1)->a <=  xMin);
-	
+
 	double wSum=itr->a-xMin;
 	double wxy1=(itr->a-xMin)*0.5*(itr->b+linearInterpolate(xMin,(itr-1)->a, itr->a, (itr-1)->b, itr->b));
-	
+
 	while((++itr)->a <=  xMax && itr != tabl.end())  {
 		wSum+=itr->a-(itr-1)->a;
 		wxy1+=(itr->a-(itr-1)->a)*0.5*(itr->b+(itr-1)->b);
@@ -785,13 +693,8 @@ inline double averageCDF(double xMin, double xMax, const std::vector<dbl2>& tabl
 }
 
 
-//double variance(const piece<double>& vs, piece<double> ws)  {  return sumSqrs(vs-vs.avg(), ws)/sum(ws);  } // biased
 template<class T, class T2>
 double corelCoeff(piece<T> X, piece<T> Y, piece<T2> ws) { return sum((X-X.avg())*(Y-Y.avg())*ws) / sqrt(sumSqrs(X-X.avg(), ws) * sumSqrs(Y-Y.avg(), ws)); }
-//template<class T>
-//double covarianceDbl(piece<T> X, piece<T> Y) { return sumdbl((X-X.avgdbl())*(Y-Y.avgdbl())) / (X.size()-1); }
-//template<class T>
-//double   varianceDbl(piece<T> X) { return sumdblSqrs(X-X.avgdbl()) / (X.size()-1); }
 
 
 inline double sqr(double a) { return a*a; }
@@ -802,7 +705,7 @@ inline double sqr(double a) { return a*a; }
 
 
 /* //- Debugging:
- Edit file: /usr/share/gcc-5/python/libstdcxx/v6/printers.py, for gdb pretty printing
+ Edit file: /usr/share/gcc/python/libstdcxx/v6/printers.py, for gdb pretty printing
 class varsPrinter:
     "Print a vars"
 
@@ -845,5 +748,3 @@ in build_libstdcxx_dictionary, add:
     libstdcxx_printer.add_container('', 'piece', varsPrinter)
     libstdcxx_printer.add_container('', 'Vars', varsPrinter)
 */
-
-
