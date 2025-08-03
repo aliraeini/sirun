@@ -1,6 +1,4 @@
-#ifndef TYPSES_H
-#define TYPSES_H
-
+#pragma once
 
 // Convinience vector classes used by network extraction, flow simulation
 // and other codes developed by Ali Qaseminejad Raeini.
@@ -16,7 +14,7 @@
 #include <algorithm>
 #include <map>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include <regex>
 
 template<typename T> T strTo(const std::string &s){  std::istringstream ss(s);  T t;  ss>>t;  return t; }
@@ -40,8 +38,6 @@ template<typename T> T strTo(const std::string &s){  std::istringstream ss(s);  
 	using std::enable_if_t;
 #endif
 
-#define _T_ typename std::remove_const<T>::type
-
 #ifdef OpenMP
  #ifdef _debugCompile_
   #define OMPragma(_args_)
@@ -53,18 +49,19 @@ template<typename T> T strTo(const std::string &s){  std::istringstream ss(s);  
 #endif
 #define OMPFor(_args_)  OMPragma(TOSTRING(omp parallel for _args_))
 
-
 #define for_i(_vector_m_)  for(size_t i=0; i<_vector_m_.size(); ++i)
 #ifndef for_
- #define for_(_vector_m_, _i_m_)  for(size_t _i_m_=0;_i_m_<_vector_m_.size(); ++_i_m_)
+ #define for_(_vector_m, _i_m)  for(size_t _i_m=0; _i_m<_vector_m.size(); ++_i_m)
 #endif
+#define for_0(_i_end_m, _ind_)  for(int _ind_=0; _ind_<_i_end_m; ++_ind_)
+#define for_i_(_i_bgn_m,_i_end_m)  for(int i=_i_bgn_m; i<_i_end_m; ++i)
 #define fori0to(_n_m_)  for(int i=0; i<_n_m_; ++i)
 #define forin(_i_bgn_m,_i_end_m)  for(int i=_i_bgn_m; i<_i_end_m; ++i)
 #define forint(_ind_, _i_bgn_m,_i_end_m)  for(int _ind_=_i_bgn_m; _ind_<_i_end_m; ++_ind_)
 
 
 
-constexpr double PI = 3.14159265358979;
+constexpr double PI = 3.141592653589793;
 
 
 #include "globals.h"
@@ -72,14 +69,13 @@ constexpr double PI = 3.14159265358979;
 
 //! 3D vector class template
 template<class T>
-class var3  {
- public:
+struct var3  {
 	T	x, y, z;
 	var3() = default;// Warning: not zero initialized in opt mode
 	template< typename std::enable_if<std::is_arithmetic<T>::value,int>::type = 0>
 	explicit var3(T r)        { x = r;     y = r;     z = r; } // use this to zero-initialize
-	var3(T r, T s, T t)       { x = r;     y = s;     z = t; }
-	explicit var3(const T* d)          { x = d[0];  y = d[1];  z = d[2]; }
+	constexpr var3(T r, T s, T t) { x = r;     y = s;     z = t; }
+	explicit var3(const T* d)     { x = d[0];  y = d[1];  z = d[2]; }
 	template<class U>
 	var3(var3<U> n)           { x = n.x;   y = n.y;   z = n.z; }
 	#ifdef VMMLIB__VECTOR__HPP
@@ -138,14 +134,11 @@ template<class T>  var3<T> rotateAroundVec(const var3<T> b, double gamma, var3<T
 }
 
 
-
-
 //! 2D vector class template
 template<class T>
-class var2  {
- public:
-	T a;//union {T	first;  T x; };
-	T b;//union {T	second; T y; };
+struct var2  {
+	T a;
+	T b;
 	var2() = default;//not zero initialized
 	var2(T r, T s)          { a = r;  b = s; }
 	var2(int r)             { a = r;  b = r; }  // use this to zero-initialize //ERROR REMOVE ME
@@ -167,14 +160,14 @@ class var2  {
 
 	var2&  operator += (const var2& v)  { a += v.b;  b += v.b;  return *this; }
 	var2&  operator -= (const var2& v)  { a -= v.b;  b -= v.b;   return *this; }
-	var2&  operator *= (const double t) { a *= t;  b *= t;   return *this; }
-	var2&  operator /= (const double t) { double f = 1./t;  a *= f;  b *= f;  return *this; }
+	var2&  operator *= (double t)       { a *= t;  b *= t;   return *this; }
 	var2&  operator *= (const var2& v)  { a *= v.b;  b *= v.b;   return *this; }
+	var2&  operator /= (double t)       { double f = 1./t;  a *= f;  b *= f;  return *this; }
 	var2   operator -  (void) const          { return (var2(-a, -b)); }
 	var2   operator +  (const var2& v) const { return (var2(a+v.b, b+v.b)); }
 	var2   operator -  (const var2& v) const { return (var2(a-v.b, b-v.b)); }
-	var2   operator *  (const double t)const { return (var2(a*t, b*t)); }
-	var2   operator /  (const double t)const { double f = 1./t;  return (var2(a*f, b*f)); }
+	var2   operator *  (double t)      const { return (var2(a*t, b*t)); }
+	var2   operator /  (double t)      const { double f = 1./t;  return (var2(a*f, b*f)); }
 	double operator &  (const var2& v) const { return (a*v.b+b*v.b); }
 	var2   operator *  (const var2& v) const { return (var2(a*v.b, b*v.b)); }
 	var2   operator /  (const var2& v) const { return (var2(a/v.b, b/v.b)); }
@@ -203,12 +196,9 @@ template<class T>  T  toScalar(const var3<T>& v) { return mag(v); }
 
 
 
-
-
 //! a piece of a contiguous array, used for efficient and prettier pass of array contents than using iterators, similar to std::string_view
 template<class T>
-class piece  {
- public:
+struct piece  {
 
 	piece() noexcept: d(0), dn(0) {};
 	piece(T* dd, int n) noexcept: d(dd), dn(d+n)     {};
@@ -219,16 +209,16 @@ class piece  {
 	void reset(const piece& vs)     { d=&vs[0]; dn=d+vs.size(); };//! note data hold by piece are not const unless piece is const itself
 	void reset(std::vector<T>& vs)  { d=&vs[0]; dn=d+vs.size(); };
 
-	T* begin() const { return d; };
-	T* end()   const { return dn; };
-	const T& back()   const { return *(dn-1); };
-	const T* cbegin() const { return d; };
-	const T* cend()   const { return dn; };
-	T* operator ()()   const { return d; };
-	//const T& operator [](int i) const { return d[i]; };
-	//const T* operator ()() const { return d; };
-	T& operator [](int i) const { return d[i]; };
-	size_t size() const        { return dn-d; };
+	T* begin() const { return d; }
+	T* end()   const { return dn; }
+	const T& back()   const { return *(dn-1); }
+	const T* cbegin() const { return d; }
+	const T* cend()   const { return dn; }
+	T* operator ()()   const { return d; }
+	//const T& operator [](int i) const { return d[i]; }
+	//const T* operator ()() const { return d; }
+	T& operator [](int i) const { return d[i]; }
+	size_t size() const        { return dn-d; }
 	size_t capacity()          { return dn-d; }
 	T* data() { return d; }
 	const T* data() const { return d; }
@@ -344,14 +334,14 @@ template<class T> Vars<T>  operator &(const piece<var3<T>>& dis, const piece<var
 //! a name and transformation information, used in #svplot only for now
 template<class T>
 class varsORv: public Vars<T> {
+	using piece<T>::d;
+	using piece<T>::dn;
  public:
 	T dfult;
 	std::string name;
-	T Xa,  Xp; //! scale, shift
-	using piece<T>::d;
-	using piece<T>::dn;
+	T Xa,  Xp; //!< scale, shift
 	T (*transf)(T);
-	T ax,  px; ///  scale, shift before transform
+	T ax,  px; //!< scale, shift before transform
 
 	varsORv()                        :                      dfult(0)    , Xa(1)    , Xp(0)    , transf([](double a){return a;}), ax(1)    , px(0)     {}
 	varsORv(const T& val)            :                      dfult(val)  , Xa(1)    , Xp(0)    , transf([](double a){return a;}), ax(1)    , px(0)     {}
@@ -365,16 +355,16 @@ class varsORv: public Vars<T> {
 	varsORv(const T* dd, const T* de, T(*fn)(T)): Vars<T>(dd,de,fn)     , Xa(1)    , Xp(0)    , transf([](double a){return a;}), ax(1)    , px(0)     {}
 
 	//varsORv(Vars<T>& vs, bool move): Vars<T>(vs,move)  {} //same as above but enforced by move
-	void operator =(const piece<T>& v)  { { if(d) delete[] d; }  d = new T[v.size()]; std::copy(v.d, v.dn, d);  dn=d+v.size(); };
-	void operator =(const Vars<T>& v)   { { if(d) delete[] d; }  d = new T[v.size()]; std::copy(v.d, v.dn, d);  dn=d+v.size(); };
-	void operator =(const varsORv& v)   { { if(d) delete[] d; }  d = new T[v.size()]; std::copy(v.d, v.dn, d);  dn=d+v.size();
+	void operator =(const piece<T>& v)  { delete[] d;  d = new T[v.size()]; std::copy(v.d, v.dn, d);  dn=d+v.size(); };
+	void operator =(const Vars<T>& v)   { delete[] d;  d = new T[v.size()]; std::copy(v.d, v.dn, d);  dn=d+v.size(); };
+	void operator =(const varsORv& v)   { delete[] d;  d = new T[v.size()]; std::copy(v.d, v.dn, d);  dn=d+v.size();
 	                                      dfult=v.dfult; Xa=v.Xa; Xp=v.Xp; transf=v.transf; ax=v.ax; px=v.px; };
-	void operator =(const std::vector<T>& v){ { if(d) delete[] d; }  d = new T[v.size()]; std::copy(&v[0], &*v.end(), d);  dn=d+v.size(); };
-	void operator =(const std::initializer_list<T>& v){ { if(d) delete[] d; }  d = new T[v.size()]; std::copy(v.begin(), v.end(), d);  dn=d+v.size(); };
+	void operator =(const std::vector<T>& v){ delete[] d;  d = new T[v.size()]; std::copy(&v[0], &*v.end(), d);  dn=d+v.size(); };
+	void operator =(const std::initializer_list<T>& v){ delete[] d;  d = new T[v.size()]; std::copy(v.begin(), v.end(), d);  dn=d+v.size(); };
 
 	void operator =(Vars<T>&& v) noexcept { Vars<T>::eat(v); }
 
-	T& operator [](int i)             { if(d+i<dn) return d[i]; else return dfult; }
+	T&       operator [](int i)       { if(d+i<dn) return d[i]; else return dfult; }
 	const T& operator [](int i) const { if(d+i<dn) return d[i]; else return dfult; }
 	T scalefrom01(T val) const       { return   Xp+Xa*transf(val*ax+px); }
 
@@ -395,29 +385,26 @@ template<class T>  Vars<T> round(const Vars<T>& vec) 	{ 	Vars<T> rt(vec); 	for(a
 
 
 
-#endif // TYPSES_H
-
-
-
-
 
 #ifndef TYPSES_OERATIONS_H
 #define TYPSES_OERATIONS_H
 
 
 
-template<class C> int len(C vec) { return vec.size(); } // casts size to int
+template<class C> int len(const C& vec) { return vec.size(); } // casts size to int, deprecated
 
 template<class T> double sumdbl(const piece<T>& ps)  { double sm=1e-300; for(auto a:ps){ sm += a; }  return sm; }
 template<class T> double sumdbl(const piece<T>& ps, const piece<T>& ws) { double sm=1e-300; const T* p=ps.d-1, *w=ws.d-1; while(++p<ps.dn){ sm+= *(++w) * *p; }  return sm; }
-inline            double sumdbl(const dbl3& ps, const dbl3& ws)  { return ps.x+ws.x + ps.y+ws.y + ps.z+ws.z; }
+inline            double sumdbl(const dbl3& ps, const dbl3& ws)  { return ps.x*ws.x + ps.y*ws.y + ps.z*ws.z; }
 inline            double sumdbl(const dbl3& ps)                  { return ps.x+ ps.y+ ps.z; }
 
 template<class T> T sumq(piece<T> ps)  {	T sm = *ps.d; while(++ps.d<ps.dn){ sm += *ps.d; }  return sm; }//! quick sum, assumes non-empty vec
 
-template<class T>          T sum(const piece<T>& ps)  {	T sm = (T()*0.); const T* p= ps.d-1; while(++p<ps.dn){ sm+= *p; }  return sm; }
-template<class T, class U> T sum(const piece<T>& ps, const piece<U>& ws)  {  T sm= (T()*0.);  T* p= ps.d-1;  U *w=ws.d-1; while(++p<ps.dn){ sm+= *(++w) * *p; }  return sm; }
+#define _T_ typename std::remove_const<T>::type
+template<class T>          T sum(const piece<T>& ps)  {	_T_ sm = (T()*0.); const T* p= ps.d-1; while(++p<ps.dn){ sm+= *p; }  return sm; }
+template<class T, class U> T sum(const piece<T>& ps, const piece<U>& ws)  {  _T_ sm= (T()*0.);  T* p= ps.d-1;  U *w=ws.d-1; while(++p<ps.dn){ sm+= *(++w) * *p; }  return sm; }
 template<class T> vars<T> sum(piece<piece<T>> ps)  { Vars<T> sm(ps[0]); while(++ps.d<ps.dn){ sm+= *ps.d; }  return sm;  } // does not work for size zero
+#undef _T_
 
 template<class T>           T sumSqrs(const piece<T>& ps)  {  T sm= (T()*0.); const T* p= ps.d-1; while(++p<ps.dn){ sm+= *p * *p; }  return sm; }
 template<class T, class U>  T sumSqrs(const piece<T>& ps, const piece<U>& ws)  { //TODO remove refs
@@ -459,23 +446,29 @@ template<class T, template<class ...> class C>  piece<T> allof(C<T>& vs) { retur
 
 
 
-template<class T>          std::ostream& operator << (std::ostream& out, const var3<T>& pos) {
+template<class T>
+std::ostream& operator << (std::ostream& out, const var3<T>& pos) {
 	out << pos.x<<' '<< pos.y<<' '<<pos.z;   return out;  }
 
-template<class T>          std::istream& operator >> (std::istream& ins, var3<T>& pos) {
+template<class T>
+std::istream& operator >> (std::istream& ins, var3<T>& pos) {
 	ins >> pos.x >> pos.y >> pos.z;	return ins;	}
 
-template<class T, class U> std::istream& operator >> (std::istream& ins, std::pair<T,U>& ab) {
+template<class T, class U>
+std::istream& operator >> (std::istream& ins, std::pair<T,U>& ab) {
  	ins >> ab.first >> ab.second;   return ins; 	}
 
-template<class T, class U> std::ostream& operator << (std::ostream& out, const std::pair<T,U>& ab) {
+template<class T, class U>
+std::ostream& operator << (std::ostream& out, const std::pair<T,U>& ab) {
  	out << ab.first<<' '<<ab.second; return out; 	}
 
-template<class T>          std::istream& operator >> (std::istream& ins, var2<T>& ab) {
+template<class T>
+std::istream& operator >> (std::istream& ins, var2<T>& ab) {
  	ins >> ab.a >> ab.b;     return ins; 	}
 
 
-template<class T>          std::ostream& operator << (std::ostream& out, const var2<T>& ab) {
+template<class T>
+std::ostream& operator << (std::ostream& out, const var2<T>& ab) {
  	out << ab.a<<' '<< ab.b; return out; 	}
 
 
@@ -506,7 +499,6 @@ template<class T>          std::ostream& operator << (std::ostream& out, const p
 
 template<class T>          std::istream& operator >> (std::istream& ins, piece<T> vec) {// Warning relying on copy constructor not to deep copy
 	for (; vec.d<vec.end(); ++vec.d)   ins >> *vec.d;
-	//if (ins.fail()) std::cout<<"Error while reading array"<<std::endl;
 	return ins;
 }
 
@@ -541,17 +533,14 @@ inline std::string replaceFromTo(const std::string& str, const std::string& frm,
 }
 
 
-inline std::string basePath(const std::string& fName) { // removes file suffix
-	auto dloc=fName.find_last_of('.');
-    if( dloc != std::string::npos)    {
-    	auto sl=fName.find_last_of('/');
-    	if( sl!=std::string::npos && sl>dloc) return fName;
-		return fName.substr(0,dloc);
+inline std::string basePath(const std::string& path) { /// removes file suffix
+	if(auto dl=path.find_last_of('.'); dl != std::string::npos)    {
+   	if(auto sl=path.find_last_of('/'); sl!=std::string::npos && sl>dl)
+			return path;
+		return path.substr(0,dl);
 	}
-	return fName;
+	return path;
 }
-
-
 
 
 template<class T> bool _1At(T n, int ibgn)  {  return n&(1<<ibgn);  }
@@ -566,7 +555,6 @@ template<class T> bool _1In(T n, int ibgn, int lnt)  {  return (n>>ibgn)&((1<<ln
 
 inline double roundec(double x,int d)  { double scale=std::pow(10,int(std::log10(x)))/std::pow(10,d); return std::round(x/scale)*scale; } // round x to d significant digits
 
-//template<class T> piece<T>   insidvars(piece<T>& vs) { return piece<T>(vs.d+1, vs.dn-1); }
 template<class T> Vars<T>  diffVars(piece<T> vs) { Vars<T> rt(vs);  piece<T>(rt.d+1,rt.dn)-=vs; rt[0]=rt[1]; return rt; }
 template<class T> Vars<T>  movingAvg(piece<T> vs) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
 	Vars<T> rt(vs.size());  T* d=rt.d; *d=0.5*(vs[0]+vs[1]);
@@ -574,20 +562,11 @@ template<class T> Vars<T>  movingAvg(piece<T> vs) { // apply rolling 3 moving av
 	*(++d)=0.5*(*(vs.dn-2)+*(vs.dn-1)); return rt; } // TODO: use vs storage instead of o
 
 template<class T> T closer(T cv, T v1, T v2) { return (abs(cv-v1)<abs(cv-v2)) ?  v1 : v2; }
-//template<class T> Vars<T>  biMovingAvg(piece<T> vs) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
-	//if(len(vs)<7) return vs; constexpr double p3=(1./3.);	Vars<T> res(vs.size());  T* rt=res.d;
-
-	//*rt=0.5*(vs[0]+vs[1]); *++rt=p3*(vs[0]+vs[1]+vs[2]);  *++rt=p3*(vs[1]+vs[2]+vs[3]);
-	//vs.dn-=3; T* o=vs.d+3;
-	//for(; o<vs.dn;++o) { *++rt = closer(*o,0.25*(*(o-3)+*(o-2)+*(o-1)+*o), 0.25*(*(o)+*(o+1)+*(o+2)+*(o+3)));  }  --o;
-	//*++rt=p3*(o[0]+o[1]+o[2]); *++rt=p3*(o[1]+o[2]+o[3]); *++rt=0.5*(o[2]+o[3]);
-	//return res;
-//}
 
 
 // TODO test BC handling
 template<class T> Vars<T>  biMovingAvg(piece<T> vs,int krnl, int bKrnl=1) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
-	if(len(vs)<7) return vs;
+	if(vs.size()<7)  return vs;
 	Vars<T> res(vs.size());  T* rt=res.d-1;  const double pl=1./(1+krnl);	  bKrnl=std::min(bKrnl,krnl);
 	for(int i=0; i<krnl; ++i)  { int krp = std::max(i,bKrnl)+1; *++rt=sumq(piece<T>(vs.d,krp)/krp); }
 	vs.dn-=krnl; T* o=vs.d+krnl;
@@ -615,7 +594,7 @@ template<class T> T med_closer(vars<T> vs, T orig)  {
 }
 template<class T> T med_odd(vars<T> vs)  { const auto nth = vs.begin()+vs.size()/2;  std::nth_element(vs.begin(), nth, vs.end());  return *nth;  }
 template<class T> Vars<T>  median(piece<T> vs,int krnl, int bKrnl=1) { // apply rolling 3 moving average X <- ( X-- + X + X++)/3
-	if(len(vs)<7) return vs;
+	if(vs.size()<7)  return vs;
 	Vars<T> res(vs.size());  T* rt=res.d-1;	    bKrnl=std::min(bKrnl,krnl);
 	for(int i=0; i<krnl; ++i)   *++rt=med_odd(vars<T>(vs.d,2*std::max(i,bKrnl)+1));
 	vs.dn-=krnl; T* o=vs.d+krnl;
@@ -626,15 +605,10 @@ template<class T> Vars<T>  median(piece<T> vs,int krnl, int bKrnl=1) { // apply 
 
 
 
-
-
 #ifdef VMMLIB__VECTOR__HPP
  template< size_t M, typename T >
  Vctr<M,T>::Vctr(const var3<T>& v3)   { array[ 0 ] = v3.x;	array[ 1 ] = v3.y;	array[ 2 ] = v3.z; }
 #endif
-
-
-
 
 
 
