@@ -67,6 +67,9 @@ constexpr double PI = 3.141592653589793;
 #include "globals.h"
 
 
+typedef bool ErC; //!< Type of error code TODO: change to int
+
+
 //! 3D vector class template
 template<class T>
 struct var3  {
