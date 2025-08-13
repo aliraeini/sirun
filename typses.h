@@ -64,9 +64,6 @@ template<typename T> T strTo(const std::string &s){  std::istringstream ss(s);  
 constexpr double PI = 3.141592653589793;
 
 
-#include "globals.h"
-
-
 typedef bool ErC; //!< Type of error code TODO: change to int
 
 
@@ -79,6 +76,7 @@ struct var3  {
 	explicit var3(T r)        { x = r;     y = r;     z = r; } // use this to zero-initialize
 	constexpr var3(T r, T s, T t) { x = r;     y = s;     z = t; }
 	explicit var3(const T* d)     { x = d[0];  y = d[1];  z = d[2]; }
+	var3(std::nullptr_t) = delete;
 	template<class U>
 	var3(var3<U> n)           { x = n.x;   y = n.y;   z = n.z; }
 	#ifdef VMMLIB__VECTOR__HPP
@@ -96,8 +94,8 @@ struct var3  {
 	var3&  operator -= (const var3& v)  { x -= v.x;  y -= v.y;  z -= v.z;  return  *this; }
 	var3&  operator += (const T& t)     { x += t;    y += t;    z += t;    return  *this; } // clumsy
 	var3&  operator -= (const T& t)     { x -= t;    y -= t;    z -= t;    return  *this; } // clumsy
-	var3&  operator *= (const double t) { x *= t;    y *= t;    z *= t;    return  *this; }
-	var3&  operator /= (const double t) { return (*this *= 1./t);  }
+	var3&  operator *= (double t)       { x *= t;    y *= t;    z *= t;    return  *this; }
+	var3&  operator /= (double t)       { return (*this *= 1./t);  }
 	var3&  operator ^= (const var3& v)  { double r=y*v.z-z*v.y, s=z*v.x-x*v.z;  z=x*v.y-y*v.x;  x=r; y=s; 	return *this; }
 	var3&  operator *= (const var3& v)  { x *= v.x;  y *= v.y;  z *= v.z;  return *this; }
 	var3   operator -  (void)          const { return  var3(-x, -y, -z); }
@@ -116,7 +114,7 @@ struct var3  {
 };
 
 typedef  var3<int>        int3;
-typedef  var3<var3<int> > int3x3;
+typedef  var3<int3>       int3x3;
 typedef  var3<float>      float3;
 typedef  var3<double>     dbl3;
 
@@ -544,6 +542,7 @@ inline std::string basePath(const std::string& path) { /// removes file suffix
 	}
 	return path;
 }
+inline std::string baseName(const std::string& path) { return basePath(path); } // depricated, ICL backward compatibility
 
 
 template<class T> bool _1At(T n, int ibgn)  {  return n&(1<<ibgn);  }
@@ -680,6 +679,7 @@ inline double sqr(double a) { return a*a; }
 
 
 
+#include "globals.h" // lazy hack
 
 /* //- Debugging:
  Edit file: /usr/share/gcc/python/libstdcxx/v6/printers.py, for gdb pretty printing
